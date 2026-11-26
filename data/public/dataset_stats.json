@@ -1,0 +1,19 @@
+{
+  "num_node_features": 71,
+  "train_graphs": 546,
+  "test_graphs": 263,
+  "train_nodes": 382200,
+  "test_nodes": 184100,
+  "train_edges": 2047437,
+  "test_edges": 987926,
+  "mean_nodes_per_graph": 700.0,
+  "train_foreground_node_rate": 0.0067,
+  "test_gt_recall_at_iou50_by_proposals": {
+    "overall": 0.8388,
+    "small (<48 px)": "0.680 of 153",
+    "medium (48-128 px)": "0.943 of 176",
+    "large (>=128 px)": "1.000 of 37"
+  },
+  "test_ceiling_map50_perfect_node_scores": 0.8594,
+  "test_ceiling_map50_95": 0.5699
+}

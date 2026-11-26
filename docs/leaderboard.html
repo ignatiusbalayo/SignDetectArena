@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SignDetectArena Leaderboard</title>
+  <link rel="stylesheet" href="leaderboard.css">
+</head>
+<body>
+<main>
+  <h1>SignDetectArena Leaderboard</h1>
+  <p class="sub">Road sign detection on proposal graphs built from a modified Road Sign Detection dataset, scored by mAP@0.5. Updated automatically after every scored submission.</p>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search team or model" aria-label="Search">
+    <select id="type" aria-label="Filter by participant type">
+      <option value="">All participants</option>
+      <option value="human">Human</option>
+      <option value="llm">LLM</option>
+      <option value="hybrid">Hybrid</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th><th>Team</th><th>Model</th><th>Type</th>
+          <th class="num" id="h-score">Score</th><th class="num" id="h-sec">Secondary</th>
+          <th>Submitted (UTC)</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty" hidden>No submissions yet.</div>
+  </div>
+</main>
+
+<script>
+  const PRIMARY = "map50", SECONDARY = "map50_95";
+  document.getElementById("h-score").textContent = PRIMARY;
+  document.getElementById("h-sec").textContent = SECONDARY;
+
+  // Minimal CSV parser (handles quoted cells).
+  function parseCSV(text) {
+    const rows = []; let row = [], cell = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (c === '"') q = false;
+        else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(cell); cell = ""; }
+      else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+      else if (c !== "\r") cell += c;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  let data = [];
+  function render() {
+    const q = document.getElementById("q").value.toLowerCase();
+    const t = document.getElementById("type").value;
+    const body = document.getElementById("rows");
+    body.textContent = "";
+    let rank = 0, prev = null, shown = 0;
+    data.forEach((r, i) => {
+      if (r.score !== prev) { rank = i + 1; prev = r.score; }   // ties share rank
+      if (t && r.type !== t) return;
+      if (q && !(r.team + " " + r.model).toLowerCase().includes(q)) return;
+      const tr = document.createElement("tr");
+      const cells = [
+        [rank, "rank"], [r.team], [r.model],
+        [r.type, "tag"], [r.score, "num"], [r.secondary, "num"], [r.timestamp_utc],
+      ];
+      cells.forEach(([v, cls]) => {
+        const td = document.createElement("td");
+        if (cls === "tag") { const s = document.createElement("span"); s.className = "tag"; s.textContent = v; td.appendChild(s); }
+        else { td.textContent = v; if (cls) td.className = cls; }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr); shown++;
+    });
+    document.getElementById("empty").hidden = shown > 0;
+  }
+
+  fetch("leaderboard.csv", { cache: "no-store" })
+    .then(r => r.ok ? r.text() : "")
+    .then(text => {
+      const rows = parseCSV(text).filter(r => r.length > 1);
+      const head = rows.shift() || [];
+      data = rows.map(r => Object.fromEntries(head.map((h, i) => [h, r[i] || ""])))
+                 .sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
+      render();
+    })
+    .catch(render);
+
+  document.getElementById("q").addEventListener("input", render);
+  document.getElementById("type").addEventListener("change", render);
+</script>
+</body>
+</html>

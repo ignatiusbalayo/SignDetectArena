@@ -1,0 +1,37 @@
+# ---- Private data & secrets (NEVER commit) ----
+data/raw/
+data/private/
+encryption/private_key.pem
+encryption/labels.key
+*.key
+*.env
+*.seed
+seed.txt
+result.json
+changed.txt
+
+# Large graph files: shipped in the GitHub Release zip, not in git
+data/public/train_nodes.csv
+data/public/train_edges.csv
+data/public/test_nodes.csv
+data/public/test_edges.csv
+
+# Participant working files
+predictions.csv
+temp_submissions/
+
+# Release artifacts
+SignDetectArena_Dataset.zip
+SignDetectArena_Dataset/
+
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ---- OS junk ----
+.DS_Store
+Thumbs.db

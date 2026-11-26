@@ -1,0 +1,122 @@
+name: Score Submission
+
+# pull_request_target runs the workflow from the trusted base branch and gives
+# access to secrets. We therefore NEVER execute code from the PR: only the
+# participant's data files (submission.enc, metadata.json) are copied over.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'submissions/inbox/**'
+
+# One scoring run at a time so leaderboard commits never race.
+concurrency:
+  group: leaderboard
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pillow pyyaml cryptography
+
+      - name: Fetch PR head and list changed files
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git fetch origin "pull/${PR_NUMBER}/head:pr-head"
+          git diff --name-only "origin/${BASE_BRANCH}...pr-head" > changed.txt
+          cat changed.txt
+
+      - name: Verify the PR only adds a submission
+        id: verify
+        run: |
+          TEAM=$(python competition/score_pr.py verify changed.txt)
+          echo "team=${TEAM}" >> "$GITHUB_OUTPUT"
+
+      - name: Copy submission files from PR (data only)
+        env:
+          TEAM: ${{ steps.verify.outputs.team }}
+        run: |
+          git checkout pr-head -- "submissions/inbox/${TEAM}"
+
+      - name: Score
+        id: score
+        env:
+          TEAM: ${{ steps.verify.outputs.team }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SUBMISSION_PRIVATE_KEY: ${{ secrets.SUBMISSION_PRIVATE_KEY }}
+          LABELS_KEY: ${{ secrets.LABELS_KEY }}
+        run: |
+          python competition/score_pr.py score --team "$TEAM" --pr "$PR_NUMBER" --result result.json
+
+      - name: Render leaderboard
+        run: python competition/render_leaderboard.py
+
+      - name: Commit leaderboard to default branch
+        env:
+          TEAM: ${{ steps.verify.outputs.team }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git config user.name "Arena Bot"
+          git config user.email "bot@users.noreply.github.com"
+          # Leaderboard files only - never commit the participant's folder.
+          git reset -q
+          git add leaderboard/leaderboard.csv leaderboard/leaderboard.md docs/leaderboard.csv
+          if git diff --staged --quiet; then
+            echo "No leaderboard changes."
+          else
+            git commit -m "Leaderboard: add ${TEAM}"
+            git pull --rebase origin "$BASE_BRANCH"
+            git push origin "HEAD:${BASE_BRANCH}"
+          fi
+
+      - name: Comment result on PR
+        if: always() && hashFiles('result.json') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const r = JSON.parse(fs.readFileSync('result.json', 'utf8'));
+            let body;
+            if (r.status === 'ok') {
+              body = `## Submission scored\n\n**Team:** ${r.team}\n**Model:** ${r.model}\n` +
+                     `**${r.primary_name}:** ${r.primary}\n**${r.secondary_name}:** ${r.secondary}\n\n` +
+                     `Your result is now on the leaderboard. This PR can be closed.`;
+            } else {
+              body = `## Submission could not be scored\n\n${r.message}`;
+            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+      - name: Comment on verification failure
+        if: failure() && steps.verify.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Rejected: a submission PR may only add `submissions/inbox/<team>/submission.enc` and `metadata.json` (one team folder). See the README.',
+            });

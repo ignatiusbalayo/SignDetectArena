@@ -1,0 +1,11 @@
+competition_name: SignDetectArena
+task: object_detection_on_proposal_graphs
+primary_metric: map50          # COCO-style AP at IoU 0.50, averaged over classes
+secondary_metric: map50_95     # COCO-style AP averaged over IoU 0.50:0.05:0.95
+max_submissions_per_team: 1
+test_file: test_ids.csv        # tiny public file listing the node ids that can be scored
+num_classes: 4
+nms_iou: 0.5                   # per-class NMS applied by the scorer to the node detections
+max_detections_per_image: 100  # kept after NMS, highest score first
+min_score: 0.001               # detections below this score are ignored
+max_candidates_per_class: 300   # per image and class, only the best-scoring nodes enter NMS

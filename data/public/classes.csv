@@ -1,0 +1,5 @@
+class_id,name
+0,speedlimit
+1,crosswalk
+2,trafficlight
+3,stop
