@@ -26,9 +26,9 @@ def main() -> None:
     lines = [
         f"# {cfg['competition_name']} Leaderboard",
         "",
-        f"Ranked by **{cfg['primary_metric']}** (higher is better). Ties share a rank.",
+        f"Ranked by **{cfg.get('primary_label', cfg['primary_metric'])}** (higher is better). Ties share a rank.",
         "",
-        f"| Rank | Team | Model | Type | {cfg['primary_metric']} | {cfg['secondary_metric']} | Submitted (UTC) |",
+        f"| Rank | Team | Model | Type | {cfg.get('primary_label', cfg['primary_metric'])} | {cfg.get('secondary_label', cfg['secondary_metric'])} | Submitted (UTC) |",
         "|-----:|:-----|:------|:-----|------:|------:|:----------------|",
     ]
     rank, prev = 0, None

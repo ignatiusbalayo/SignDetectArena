@@ -11,6 +11,8 @@
   <h1>SignDetectArena Leaderboard</h1>
   <p class="sub">Road sign detection on proposal graphs built from a modified Road Sign Detection dataset, scored by mAP@0.5. Updated automatically after every scored submission.</p>
 
+  <p class="sub"><b>mAP@0.5</b> (ranking metric): a detection is correct when its box overlaps a real sign of the same class by at least 50% (IoU), averaged over the 4 sign classes; 1.0 is perfect. <b>mAP@[0.5:0.95]</b>: the same, averaged over stricter overlaps from 50% to 95% (COCO standard), so boxes must fit tightly.</p>
+
   <div class="controls">
     <input id="q" type="search" placeholder="Search team or model" aria-label="Search">
     <select id="type" aria-label="Filter by participant type">
@@ -37,7 +39,7 @@
 </main>
 
 <script>
-  const PRIMARY = "map50", SECONDARY = "map50_95";
+  const PRIMARY = "mAP@0.5", SECONDARY = "mAP@[0.5:0.95]";
   document.getElementById("h-score").textContent = PRIMARY;
   document.getElementById("h-sec").textContent = SECONDARY;
 
