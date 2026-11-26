@@ -1,2 +1,1 @@
 team,model,type,score,secondary,timestamp_utc,notes,pr
-test_team,GraphSAGE baseline,hybrid,0.1579,0.0780,2026-11-26T16:32:08Z,',1
