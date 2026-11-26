@@ -1,0 +1,6 @@
+{
+  "team": "test_team",
+  "model": "GraphSAGE baseline",
+  "type": "hybrid",
+  "notes": ""
+}
